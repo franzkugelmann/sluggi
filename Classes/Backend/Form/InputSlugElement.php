@@ -48,7 +48,7 @@ class InputSlugElement extends \TYPO3\CMS\Backend\Form\Element\InputSlugElement
             }
 
             $mountRootPage = PermissionHelper::getTopmostAccessiblePage((int)$this->data['databaseRow']['uid']);
-            $inaccessibleSlugSegments = SluggiSlugHelper::getSlug((int)$mountRootPage['pid'], $languageId);
+            $inaccessibleSlugSegments = SluggiSlugHelper::getSlugPath($this->data['databaseRow']);
             $prefix = ($this->data['customData'][$this->data['fieldName']]['slugPrefix'] ?? '') . $inaccessibleSlugSegments;
             $editableSlugSegments = $this->data['databaseRow']['slug'];
             $allowOnlyLastSegment = (bool)Configuration::get('last_segment_only');

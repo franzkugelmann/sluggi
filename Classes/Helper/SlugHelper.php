@@ -20,6 +20,18 @@ use function explode;
  */
 class SlugHelper
 {
+    public static function getSlugPath($pageRecord) {
+        // if we have a first level slug (aka short url), we need no parent path info
+        if (substr_count($pageRecord['slug'], '/', 1) === 0) {
+            return '';
+        }
+        /** @var \TYPO3\CMS\Core\DataHandling\SlugHelper $slugHelper */
+        $slugHelper = GeneralUtility::makeInstance(\TYPO3\CMS\Core\DataHandling\SlugHelper::class, 'pages', 'slug', $GLOBALS['TCA']['pages']['columns']['slug']['config']);
+        $inaccessibleSlugSegments = $slugHelper->generate($pageRecord, $pageRecord['pid']);
+        // chop off part for current page
+        return substr($inaccessibleSlugSegments,0,strrpos($inaccessibleSlugSegments,'/'));
+    }
+
     /**
      * Return slug for given page ID
      */

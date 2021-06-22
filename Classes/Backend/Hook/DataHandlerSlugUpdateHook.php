@@ -75,30 +75,36 @@ class DataHandlerSlugUpdateHook
         $synchronize = (bool)Configuration::get('synchronize');
         $allowOnlyLastSegment = (bool)Configuration::get('last_segment_only');
 
-        if (isset($incomingFieldArray['tx_sluggi_sync']) && (bool)$incomingFieldArray['tx_sluggi_sync'] === false) {
-            $synchronize = false;
-        }
         if ($synchronize) {
             $record = BackendUtility::getRecordWSOL($table, (int)$id);
             $data = array_merge($record, $incomingFieldArray);
-            if ((bool)$data['tx_sluggi_sync']) {
-                $fieldConfig = $GLOBALS['TCA']['pages']['columns']['slug']['config'] ?? [];
-                /** @var SlugHelper $helper */
-                $helper = GeneralUtility::makeInstance(SlugHelper::class, 'pages', 'slug', $fieldConfig);
-                $incomingFieldArray['slug'] = $helper->generate($data, (int)$data['pid']);
+            // make sure to synchronize automatically only if flag is set for current page
+            if (!(bool)$data['tx_sluggi_sync']) {
+                $synchronize = false;
             }
-        } elseif (isset($incomingFieldArray['slug']) && $allowOnlyLastSegment && !PermissionHelper::hasFullPermission()) {
+        }
+        if ($synchronize) {
+            $fieldConfig = $GLOBALS['TCA']['pages']['columns']['slug']['config'] ?? [];
+            /** @var SlugHelper $helper */
+            $helper = GeneralUtility::makeInstance(SlugHelper::class, 'pages', 'slug', $fieldConfig);
+            $incomingFieldArray['slug'] = $helper->generate($data, (int)$data['pid']);
+        } elseif (!empty($incomingFieldArray['slug']) && $allowOnlyLastSegment && !PermissionHelper::hasFullPermission()) {
             $record = BackendUtility::getRecordWSOL($table, (int)$id);
             $languageId = $record['sys_language_uid'];
             $inaccessibleSlugSegments = $this->getInaccessibleSlugSegments($id, $languageId);
             // Prepend the parent page slug
-            $parentSlug = SluggiSlugHelper::getSlug($record['pid'], $languageId);
+            $parentSlug = SluggiSlugHelper::getSlugPath($record);
             if (strpos(substr($incomingFieldArray['slug'], 1), '/') !== false) {
                 $this->setFlashMessage(
                     LocalizationUtility::translate('message.slashesNotAllowed', 'sluggi'),
                     FlashMessage::WARNING
                 );
             }
+            // make sure manually edited slug starts with /
+            if (strncmp($incomingFieldArray['slug'], '/', 1) !== 0) {
+                $incomingFieldArray['slug'] = '/' . $incomingFieldArray['slug'];
+            }
+
             $incomingFieldArray['slug'] = $inaccessibleSlugSegments .
                 str_replace($inaccessibleSlugSegments, '', $parentSlug) .
                 '/' . str_replace('/', '-', substr($incomingFieldArray['slug'], 1));
@@ -156,7 +162,7 @@ class DataHandlerSlugUpdateHook
     {
         $mountRootPage = PermissionHelper::getTopmostAccessiblePage($pageId);
 
-        return SluggiSlugHelper::getSlug($mountRootPage['pid'], $languageId);
+        return SluggiSlugHelper::getSlugPath(BackendUtility::getRecordWSOL('pages', $pageId));
     }
 
     protected function setFlashMessage(string $text, int $severity): void

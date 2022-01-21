@@ -140,7 +140,7 @@ class DataHandlerSlugUpdateHook
             if ($synchronize) {
                 $record = BackendUtility::getRecordWSOL($table, (int)$id);
                 $data = array_merge($record, $incomingFieldArray);
-                if ((bool)$data['tx_sluggi_sync']) {
+                if ($data['tx_sluggi_sync']) {
                     $fieldConfig = $GLOBALS['TCA']['pages']['columns']['slug']['config'] ?? [];
                     /** @var SlugHelper $helper */
                     $helper = GeneralUtility::makeInstance(SlugHelper::class, 'pages', 'slug', $fieldConfig);
@@ -149,7 +149,7 @@ class DataHandlerSlugUpdateHook
                 if (!empty($incomingFieldArray['slug']) && $incomingFieldArray['slug'] !== $record['slug']) {
                     $this->slugService->rebuildSlugsForSlugChange(
                         $id,
-                        $record['slug'],
+                        (string) $record['slug'],
                         $incomingFieldArray['slug'],
                         $dataHandler->getCorrelationId()
                     );
